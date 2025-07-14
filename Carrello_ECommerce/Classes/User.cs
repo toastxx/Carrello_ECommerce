@@ -1,13 +1,15 @@
-﻿namespace Carrello_ECommerce.Classes
+﻿using Carrello_ECommerce.Classes.Interfaces;
+
+namespace Carrello_ECommerce.Classes
 {
-    public class User
+    public class User : IUser
     {
         #region Fields
         public string Username { get; set; }
         public string HashedPassword { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public Cart Cart { get; private set; }
+        public ICart Cart { get; private set; }
         #endregion
 
         #region Constructors

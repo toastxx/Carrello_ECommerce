@@ -1,15 +1,13 @@
-﻿using Carrello_ECommerce.Classes.Utils;
-using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using Carrello_ECommerce.Classes.Interfaces;
+using Carrello_ECommerce.Classes.Utils;
 
 namespace Carrello_ECommerce.Classes
 {
     public class ECommerceSystem
     {
         #region Fields
-        private Dictionary<string, User> Users { get; set; }
-        private User? CurrentUser { get; set; }
+        private Dictionary<string, IUser> Users { get; set; }
+        private IUser? CurrentUser { get; set; }
         private bool IsLogged => CurrentUser != null;
         private readonly string UsersFilePath = "users.json";
         #endregion
@@ -22,26 +20,39 @@ namespace Carrello_ECommerce.Classes
         #endregion
 
         #region Methods
-        // Metodo per caricare gli utenti dal file
-        private Dictionary<string, User> LoadUsers()
+        private Dictionary<string, IUser> LoadUsers()
         {
             if (File.Exists(UsersFilePath))
             {
                 var json = File.ReadAllText(UsersFilePath);
-                return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, User>>(json) 
+                var loadedUsers = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, User>>(json)
                     ?? new Dictionary<string, User>();
+
+                var result = new Dictionary<string, IUser>();
+                foreach (var kvp in loadedUsers)
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+                return result;
             }
-            return new Dictionary<string, User>();
+            return new Dictionary<string, IUser>();
         }
 
-        // Metodo per salvare gli utenti nel file
         private void SaveUsers()
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(Users);
+            var usersToSave = new Dictionary<string, User>();
+            foreach (var kvp in Users)
+            {
+                if (kvp.Value is User user)
+                {
+                    usersToSave[kvp.Key] = user;
+                }
+            }
+
+            var json = System.Text.Json.JsonSerializer.Serialize(usersToSave);
             File.WriteAllText(UsersFilePath, json);
         }
 
-        // Metodo per registrare un nuovo utente
         public bool Register(string username, string password, string firstName, string lastName)
         {
             if (Users.ContainsKey(username))
@@ -53,7 +64,6 @@ namespace Carrello_ECommerce.Classes
             return true;
         }
 
-        // Metodo per effettuare il login
         public bool Login(string username, string password)
         {
             if (!Users.ContainsKey(username))
@@ -68,13 +78,11 @@ namespace Carrello_ECommerce.Classes
             return false;
         }
 
-        // Metodo per effettuare il logout
         public void Logout()
         {
             CurrentUser = null;
         }
 
-        // Menù
         public void RunMenu()
         {
             while (true)
@@ -139,7 +147,6 @@ namespace Carrello_ECommerce.Classes
             }
         }
 
-        // Registrazione
         private void RegisterMenu()
         {
             Console.Write("Inserisci username: ");
@@ -157,7 +164,6 @@ namespace Carrello_ECommerce.Classes
                 Console.WriteLine("Username già presente");
         }
 
-        // Login
         private void LoginMenu()
         {
             Console.Write("Inserisci username: ");
@@ -171,7 +177,6 @@ namespace Carrello_ECommerce.Classes
                 Console.WriteLine("Username o password invalido/a");
         }
 
-        // Metodo del menù per aggiungere un prodotto al carrello
         private void AddProductMenu()
         {
             if (CurrentUser == null) return;
@@ -189,7 +194,6 @@ namespace Carrello_ECommerce.Classes
             SaveUsers();
         }
 
-        // Metodo del menù per rimuovere un prodotto dal carrello
         private void RemoveProductMenu()
         {
             if (CurrentUser == null) return;
@@ -200,14 +204,13 @@ namespace Carrello_ECommerce.Classes
             SaveUsers();
         }
 
-        // Metodo del menù per modificare un prodotto nel carrello
         private void ModifyProductMenu()
         {
             if (CurrentUser == null) return;
 
             Console.Write("Inserisci nome prodotto per modificare: ");
             var name = Console.ReadLine() ?? "";
-            
+
             Console.Write("Inserisci nuova quantità (premi Enter per saltare): ");
             var quantityInput = Console.ReadLine();
             int? newQuantity = !string.IsNullOrEmpty(quantityInput) && int.TryParse(quantityInput, out int q) ? q : null;
